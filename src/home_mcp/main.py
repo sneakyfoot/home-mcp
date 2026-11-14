@@ -19,10 +19,12 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.shared.exceptions import MCPError
 
-from home_mcp import apple, dante, discovery, hdfury, hue, unifi, yamaha
+from home_mcp import apple, dante, discovery, hdfury, hue, scenes, unifi, yamaha
 
 INSTRUCTIONS = """\
 Controls devices on the home network:
+- scene_run / scene_list / scene_save: one-shot recipes. Prefer these for intents like
+  "movie time" (movie), "put on music" (music), "shut it down" (all_off).
 - dante_*: Dante audio network routing (instruments, interfaces, AVIO adapters). Routes are
   receiver subscriptions: rx channel <- tx channel. Use dante_devices / dante_channels first,
   and dante_snapshot_save before large routing changes so they can be undone.
@@ -60,7 +62,7 @@ class HomeServer(MCPServer):
 
 def build() -> MCPServer:
     mcp = HomeServer(name="home-mcp", instructions=INSTRUCTIONS)
-    for module in (dante, yamaha, hdfury, hue, apple, unifi, discovery):
+    for module in (scenes, dante, yamaha, hdfury, hue, apple, unifi, discovery):
         module.register(mcp)
     return mcp
 

@@ -61,6 +61,17 @@ async def _retry_standby() -> None:
             await _command(f"set ceccmd {STANDBY}")
 
 
+async def set_projector_power(on: bool) -> str:
+    """Power the projector; also used by scenes. Cancels any pending off-retry first."""
+    global _off_retry
+    if _off_retry and not _off_retry.done():
+        _off_retry.cancel()
+    reply = await _command(f"set ceccmd {POWER_ON if on else STANDBY}")
+    if not on:
+        _off_retry = asyncio.create_task(_retry_standby())
+    return f"projector {'on' if on else 'off'} sent (vertex2: {reply or 'no reply'})"
+
+
 def register(mcp: MCPServer) -> None:
     @mcp.tool()
     async def projector_power(on: bool) -> str:
@@ -68,13 +79,7 @@ def register(mcp: MCPServer) -> None:
 
         Warm-up takes ~1 min and the projector ignores off during it; off keeps re-sending
         for ~90 s so "off" right after "on" still lands. Use yamaha_* for the AVR."""
-        global _off_retry
-        if _off_retry and not _off_retry.done():
-            _off_retry.cancel()
-        reply = await _command(f"set ceccmd {POWER_ON if on else STANDBY}")
-        if not on:
-            _off_retry = asyncio.create_task(_retry_standby())
-        return f"projector {'on' if on else 'off'} sent (vertex2: {reply or 'no reply'})"
+        return await set_projector_power(on)
 
     @mcp.tool()
     async def vertex2_status() -> dict:

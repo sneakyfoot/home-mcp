@@ -18,6 +18,8 @@ DEFAULTS: dict[str, Any] = {
     "yamaha_host": "192.168.1.94",
     "hue_host": "192.168.1.169",
     "hue_username": None,
+    # Warm tungsten white applied whenever brightness changes without an explicit color.
+    "hue_default_kelvin": 2700,
     "vertex2_host": "192.168.1.193",
     "vertex2_port": 2220,
     "unifi_host": "192.168.1.1",

@@ -57,6 +57,9 @@ def _state(on: bool | None, brightness: int | None, kelvin: int | None, color: s
     if brightness is not None:
         state["bri"] = max(1, min(254, round(brightness * 254 / 100)))
         state.setdefault("on", True)
+        # House style: brightness changes land on warm tungsten unless a color is asked for.
+        if kelvin is None and color is None:
+            kelvin = int(config.get("hue_default_kelvin"))
     if kelvin is not None:
         state["ct"] = max(153, min(500, round(1_000_000 / kelvin)))
         state.setdefault("on", True)
@@ -150,7 +153,8 @@ def register(mcp: MCPServer) -> None:
         color: str | None = None,
         transition_s: float | None = None,
     ) -> dict:
-        """Set one light. light: id or name. brightness 0-100, kelvin 2000-6500, color "#RRGGBB"."""
+        """Set one light. light: id or name. brightness 0-100 (defaults to warm 2700K unless kelvin
+        or color is given), kelvin 2000-6500, color "#RRGGBB"."""
         light_id, _ = await _lookup("lights", light)
         state = _state(on, brightness, kelvin, color)
         if transition_s is not None:
@@ -167,7 +171,8 @@ def register(mcp: MCPServer) -> None:
         color: str | None = None,
         transition_s: float | None = None,
     ) -> dict:
-        """Set every light in a room/zone. room: id or name ("all" = every light)."""
+        """Set every light in a room/zone. room: id or name ("all" = every light).
+        Brightness changes default to warm 2700K unless kelvin or color is given."""
         group_id = "0" if room.lower() == "all" else (await _lookup("groups", room))[0]
         state = _state(on, brightness, kelvin, color)
         if transition_s is not None:
