@@ -78,7 +78,13 @@ def register(mcp: MCPServer) -> None:
         """Turn the projector on or off (HDMI-CEC via the Vertex2; the AVR is not affected).
 
         Warm-up takes ~1 min and the projector ignores off during it; off keeps re-sending
-        for ~90 s so "off" right after "on" still lands. Use yamaha_* for the AVR."""
+        for ~90 s so "off" right after "on" still lands. Use yamaha_* for the AVR.
+
+        ON only works while the projector's HDMI Link "Power On Link" is Device->PJ. It is
+        currently PJ->Device (so Apple TV wake for music can't power it), which makes ON a
+        silent no-op: never claim the projector is on from this reply alone. Check
+        vertex2_status (output_to_projector non-empty) and otherwise ask the user to use the
+        projector remote. Turning the projector off mid-music pauses the Apple TV."""
         return await set_projector_power(on)
 
     @mcp.tool()
