@@ -1,0 +1,29 @@
+[project]
+name = "home-mcp"
+version = "0.1.0"
+description = "MCP server for controlling devices on the home network (Dante, Yamaha, Hue, Apple)"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "mcp>=1.20",
+  "netaudio>=0.6.0",
+  "httpx>=0.28",
+  "pyatv>=0.18.0",
+  "zeroconf>=0.150",
+  # pyatv 0.18 passes SRPClientSession private key positionally; srptools 2.0 made it kw-only.
+  "srptools<2",
+]
+
+[project.scripts]
+home-mcp = "home_mcp.main:main"
+
+[build-system]
+requires = ["uv_build>=0.4.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
