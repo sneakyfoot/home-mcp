@@ -19,7 +19,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.shared.exceptions import MCPError
 
-from home_mcp import apple, dante, discovery, hue, unifi, yamaha
+from home_mcp import apple, dante, discovery, hdfury, hue, unifi, yamaha
 
 INSTRUCTIONS = """\
 Controls devices on the home network:
@@ -27,6 +27,8 @@ Controls devices on the home network:
   receiver subscriptions: rx channel <- tx channel. Use dante_devices / dante_channels first,
   and dante_snapshot_save before large routing changes so they can be undone.
 - yamaha_*: AV receiver (power, input, volume in dB, DSP program, network playback).
+- projector_power: Epson projector on/off via HDMI-CEC from the HDFury Vertex2 (AVR unaffected;
+  warm-up ~1 min). vertex2_status: HDMI signal path to the projector.
 - hue_*: Philips Hue lights, rooms and scenes (hue_pair once, after pressing the bridge button).
 - apple_*: Apple TV / HomePods via pyatv. shortcut_* (macOS host only): Apple Home via Shortcuts.
 - unifi_* / protect_*: UniFi network clients and Protect camera snapshots (needs API key).
@@ -58,7 +60,7 @@ class HomeServer(MCPServer):
 
 def build() -> MCPServer:
     mcp = HomeServer(name="home-mcp", instructions=INSTRUCTIONS)
-    for module in (dante, yamaha, hue, apple, unifi, discovery):
+    for module in (dante, yamaha, hdfury, hue, apple, unifi, discovery):
         module.register(mcp)
     return mcp
 
