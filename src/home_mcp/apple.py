@@ -58,7 +58,12 @@ async def _scan(timeout: int = 4):
         pyatv.scan(loop, timeout=timeout),
         pyatv.scan(loop, timeout=timeout, hosts=known) if known else asyncio.sleep(0, []),
     )
-    merged = {c.identifier: c for c in [*multicast, *unicast]}
+    # Key by address: the two scans can report different identifier variants for one device.
+    merged: dict[str, Any] = {}
+    for c in [*multicast, *unicast]:
+        prev = merged.get(str(c.address))
+        if prev is None or len(list(c.services)) > len(list(prev.services)):
+            merged[str(c.address)] = c
     seen = sorted({str(c.address) for c in merged.values()} | set(known))
     if seen != sorted(known):
         config.update(apple_hosts=seen)
@@ -74,8 +79,10 @@ async def _conf(device: str):
     if len(chosen) != 1:
         raise ValueError(f"device '{device}' not found/ambiguous. Known: {[c.name for c in confs]}")
     conf = chosen[0]
-    for proto_name, creds in (config.get("atv_credentials").get(conf.identifier) or {}).items():
-        conf.set_credentials(Protocol[proto_name], creds)
+    stored = config.get("atv_credentials")
+    for ident in conf.all_identifiers:
+        for proto_name, creds in (stored.get(ident) or {}).items():
+            conf.set_credentials(Protocol[proto_name], creds)
     return conf
 
 
@@ -97,7 +104,7 @@ def register(mcp: MCPServer) -> None:
                 "model": str(c.device_info.model_str),
                 "os": str(c.device_info.operating_system),
                 "protocols": sorted(s.protocol.name for s in c.services),
-                "paired": sorted((stored.get(c.identifier) or {}).keys()),
+                "paired": sorted({p for i in c.all_identifiers for p in stored.get(i) or {}}),
             }
             for c in await _scan()
         ]
