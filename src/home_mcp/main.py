@@ -7,6 +7,7 @@ home-mcp serve [--port 8765]  streamable HTTP at http://HOST:PORT/mcp (long-runn
 from __future__ import annotations
 
 import argparse
+import functools
 import hmac
 import logging
 import os
@@ -14,7 +15,9 @@ import sys
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.shared.exceptions import MCPError
 
 from home_mcp import apple, dante, discovery, hue, unifi, yamaha
 
@@ -31,8 +34,30 @@ Controls devices on the home network:
 """
 
 
+def _surface_errors(fn):
+    """mcp 2.x hides the text of any exception that isn't a ToolError. Device errors
+    ("not paired, press the bridge button", "device not found, known: ...") are exactly
+    what the model needs to see, so re-raise everything as ToolError."""
+
+    @functools.wraps(fn)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await fn(*args, **kwargs)
+        except (ToolError, MCPError):
+            raise
+        except Exception as exc:
+            raise ToolError(f"{type(exc).__name__}: {exc}") from exc
+
+    return wrapper
+
+
+class HomeServer(MCPServer):
+    def add_tool(self, fn, *args, **kwargs) -> None:
+        super().add_tool(_surface_errors(fn), *args, **kwargs)
+
+
 def build() -> MCPServer:
-    mcp = MCPServer(name="home-mcp", instructions=INSTRUCTIONS)
+    mcp = HomeServer(name="home-mcp", instructions=INSTRUCTIONS)
     for module in (dante, yamaha, hue, apple, unifi, discovery):
         module.register(mcp)
     return mcp
