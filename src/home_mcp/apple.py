@@ -45,9 +45,24 @@ REMOTE_COMMANDS = {
 }
 
 
-async def _scan(identifier: str | None = None, timeout: int = 4):
+async def _scan(timeout: int = 4):
+    """Multicast scan + unicast scan of every Apple host seen before, merged by identifier.
+
+    On Linux the netaudio engine shares UDP 5353 (SO_REUSEPORT), so unicast mDNS replies
+    to a multicast query can land on its socket instead of pyatv's. Unicast queries to a
+    known host reply to an ephemeral port and are unaffected, so known hosts always answer.
+    """
     loop = asyncio.get_running_loop()
-    return await pyatv.scan(loop, timeout=timeout, identifier=identifier)
+    known = list(config.get("apple_hosts") or [])
+    multicast, unicast = await asyncio.gather(
+        pyatv.scan(loop, timeout=timeout),
+        pyatv.scan(loop, timeout=timeout, hosts=known) if known else asyncio.sleep(0, []),
+    )
+    merged = {c.identifier: c for c in [*multicast, *unicast]}
+    seen = sorted({str(c.address) for c in merged.values()} | set(known))
+    if seen != sorted(known):
+        config.update(apple_hosts=seen)
+    return list(merged.values())
 
 
 async def _conf(device: str):

@@ -21,6 +21,8 @@ DEFAULTS: dict[str, Any] = {
     "unifi_host": "192.168.1.1",
     "unifi_api_key": None,
     "atv_credentials": {},  # identifier -> {protocol_name: credentials}
+    # Apple TV / HomePod IPs always scanned by unicast; grows as new devices are seen.
+    "apple_hosts": ["192.168.1.65", "192.168.1.74", "192.168.1.226"],
 }
 
 
