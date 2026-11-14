@@ -180,13 +180,28 @@ def register(mcp: MCPServer) -> None:
     @mcp.tool()
     async def apple_remote(device: str, command: str) -> str:
         """Send a remote command: play, pause, play_pause, stop, next, previous, up, down, left,
-        right, select, menu, home, volume_up, volume_down, skip_forward, skip_backward,
-        turn_on, turn_off."""
+        right, select, menu, home, volume_up, volume_down, skip_forward, skip_backward.
+
+        play/pause are state-aware (toggle only when needed). If the Apple TV is asleep they may
+        time out; ask the user to wake it with its remote rather than waking it from here.
+        There is deliberately no power on/off: pyatv's wake sends CEC "display on", which powers
+        the projector (lamp wear), and its sleep can broadcast standby to the AVR."""
+        if command in {"turn_on", "turn_off"}:
+            raise ValueError(
+                "power commands are disabled (they switch the projector/AVR via CEC); "
+                "use play/pause to wake it, projector_power for the projector"
+            )
         atv = await _connect(device)
         try:
-            if command in {"turn_on", "turn_off"}:
-                await getattr(atv.power, command)()
-            elif command in {"volume_up", "volume_down"}:
+            if command in {"play", "pause"}:
+                # On current tvOS, Companion `play` is often ignored; play_pause works. Only
+                # toggle when the state actually needs to change.
+                state = (await atv.metadata.playing()).device_state.name
+                if (command == "play") != (state == "Playing"):
+                    await atv.remote_control.play_pause()
+                    return f"{command} -> {device} (was {state})"
+                return f"already {state.lower()} on {device}"
+            if command in {"volume_up", "volume_down"}:
                 await getattr(atv.audio, command)()
             elif command in REMOTE_COMMANDS:
                 await getattr(atv.remote_control, command)()
